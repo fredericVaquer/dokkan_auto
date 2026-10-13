@@ -28,6 +28,7 @@
     {"id": "p5",   "type": "normal", "pos": [15, 3.5],  "next": ["q"]},
     {"id": "k",    "type": "kinton", "pos": [12.5, 0.5], "target": "q"},
     {"id": "q",    "type": "normal", "pos": [16, 2],    "next": ["boss"]},
-    {"id": "boss", "type": "boss",   "pos": [17, 2]}
+    {"id": "boss", "type": "boss",   "pos": [17, 2], "next": ["end"]},
+    {"id": "end",  "type": "final",  "pos": [18, 2]}
   ]
 }

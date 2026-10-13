@@ -1,6 +1,6 @@
 {
   "name": "Complex Mixed",
-  "description": "Everything at once: a 2-way branch (fight route vs exclusive+damage route), a 3-way branch (Kinton shortcut / items+damage / fight), random, negative and damage tiles, forced stops and the boss.",
+  "description": "Everything at once: a 2-way branch (fight route vs exclusive+damage route), a 3-way branch (Kinton shortcut / items+damage / a plain fight you can walk past with the right die), random, Baba shop and damage tiles, forced stops, the boss and the final tile.",
   "start": "s",
   "initial_dice": [2, 4, 6],
   "nodes": [
@@ -8,14 +8,14 @@
     {"id": "a",    "type": "zeni",          "pos": [1, 2],    "next": ["b"]},
     {"id": "b",    "type": "normal",        "pos": [2, 2],    "next": ["g", "c"]},
     {"id": "g",    "type": "random",        "pos": [3, 3],    "next": ["h"]},
-    {"id": "h",    "type": "fight",         "pos": [4, 3],    "next": ["i"]},
+    {"id": "h",    "type": "fight",         "pos": [4, 3],    "next": ["i"], "stop": true},
     {"id": "i",    "type": "ki",            "pos": [5, 3],    "next": ["f"]},
     {"id": "c",    "type": "exclusive",     "pos": [3, 1],    "next": ["d"]},
     {"id": "d",    "type": "damage",        "pos": [4, 1],    "next": ["e"]},
     {"id": "e",    "type": "training_item", "pos": [5, 1],    "next": ["f"]},
     {"id": "f",    "type": "normal",        "pos": [6, 2],    "next": ["j"]},
     {"id": "j",    "type": "normal",        "pos": [7, 2],    "next": ["k"]},
-    {"id": "k",    "type": "negative",      "pos": [8, 2],    "next": ["l"]},
+    {"id": "k",    "type": "baba",          "pos": [8, 2],    "next": ["l"]},
     {"id": "l",    "type": "normal",        "pos": [9, 2],    "next": ["r", "m", "K"]},
     {"id": "K",    "type": "kinton",        "pos": [10, 0.5], "target": "u"},
     {"id": "m",    "type": "support_item",  "pos": [10, 2],   "next": ["n"]},
@@ -29,6 +29,7 @@
     {"id": "u",    "type": "normal",        "pos": [15, 2],   "next": ["v"]},
     {"id": "v",    "type": "random",        "pos": [16, 2],   "next": ["w"]},
     {"id": "w",    "type": "normal",        "pos": [17, 2],   "next": ["boss"]},
-    {"id": "boss", "type": "boss",          "pos": [18, 2]}
+    {"id": "boss", "type": "boss",          "pos": [18, 2], "next": ["end"]},
+    {"id": "end",  "type": "final",  "pos": [19, 2]}
   ]
 }

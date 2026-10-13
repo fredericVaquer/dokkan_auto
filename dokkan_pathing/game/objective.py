@@ -6,8 +6,9 @@ good?". Swapping ``fast`` for ``farming`` changes the agent's behaviour without
 touching a line of search code.
 
 The score is linear: ``score = sum(weight[m] * metrics.m)``. Negative weights are
-penalties (fights, rolls, damage), positive weights are rewards (items). The
-boss is not a metric at all, because every run must end there anyway.
+penalties (fights, rolls, damage), positive weights are rewards (items).
+``bosses`` is counted but usually left out of the weights: bosses are normally
+unavoidable, so penalising them would not change any decision.
 """
 
 from __future__ import annotations

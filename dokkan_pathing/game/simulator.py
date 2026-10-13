@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 @dataclass
 class EpisodeResult:
     metrics: Metrics
-    completed: bool  # boss reached
+    completed: bool  # final tile reached
     aborted: bool  # hit max_rolls (e.g. an agent that loops forever)
     events: list[Event] = field(default_factory=list)
 
@@ -89,7 +89,7 @@ class Simulator:
         raise ValueError(f"no automatic transition in phase {self.phase.name}")
 
     def run_episode(self, agent: Agent) -> EpisodeResult:
-        """Play until the boss (or ``max_rolls``) letting ``agent`` make every decision."""
+        """Play until the final tile (or ``max_rolls``) letting ``agent`` make every decision."""
         while not self.is_over:
             if self.phase is Phase.CHOOSE_DIE:
                 self.select_die(agent.choose_die(self.state, self.game_map))

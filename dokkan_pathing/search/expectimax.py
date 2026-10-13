@@ -104,12 +104,24 @@ def score_dice(state: GameState, depth: int, ctx: SearchContext) -> list[ScoredA
     # TODO(Exercise 3): for each slot, value = expectimax_value(play_die(...), depth, ctx).
     #   Question to answer before coding: should this call use depth or depth - 1,
     #   given where you decided to decrement depth in Exercise 2?
+    scored_actions = []
+    for slot in rules.available_slots(state):
+        next_state = rules.play_die(state, ctx.game_map, slot)
+        value = expectimax_value(next_state, depth, ctx)
+        scored_actions.append(ScoredAction(action=slot, value=value))
+    return scored_actions
     raise NotImplementedError("TODO: implement score_dice() in search/expectimax.py (Exercise 3)")
 
 
 def score_directions(state: GameState, depth: int, ctx: SearchContext) -> list[ScoredAction]:
     """One ``ScoredAction`` per branch option, in map order. State is in CHOOSE_DIRECTION."""
     # TODO(Exercise 4): like score_dice, but over direction_options and play_direction.
+    scored_actions = []
+    for direction in rules.direction_options(state, ctx.game_map):
+        next_state = rules.play_direction(state, ctx.game_map, direction)
+        value = expectimax_value(next_state, depth, ctx)
+        scored_actions.append(ScoredAction(action=direction, value=value))
+    return scored_actions
     raise NotImplementedError("TODO: implement score_directions() in search/expectimax.py (Exercise 4)")
 
 

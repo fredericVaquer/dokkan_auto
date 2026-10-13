@@ -12,7 +12,7 @@ def kinds(events):
 
 class NormalMovementTest(unittest.TestCase):
     def setUp(self):
-        self.map = line_map("start", "normal", "normal", "normal", "normal", "normal", "boss")
+        self.map = line_map("start", "normal", "normal", "normal", "normal", "normal", "final")
 
     def test_moves_exactly_die_value_steps(self):
         state = rules.play_die(rules.initial_state(self.map, (3, 1, 1)), self.map, 0)
@@ -43,15 +43,22 @@ class NormalMovementTest(unittest.TestCase):
         self.assertEqual(before.dice, (3, 1, 1))
 
 
-class FightTest(unittest.TestCase):
+class StoppingFightTest(unittest.TestCase):
     def setUp(self):
-        self.map = line_map("start", "normal", "fight", "normal", "normal", "boss")
+        self.map = build_map(
+            node("s", "start", ["a"]),
+            node("a", "normal", ["f"]),
+            node("f", "fight", ["b"], stop=True),
+            node("b", "normal", ["c"]),
+            node("c", "normal", ["end"]),
+            node("end", "final"),
+        )
 
     def test_fight_stops_movement_and_remaining_steps_are_lost(self):
         state, events = rules.select_die(rules.initial_state(self.map, (5, 1, 1)), self.map, 0)
         state, more = rules.advance(state, self.map)
         events += more
-        self.assertEqual(state.position, "n2")
+        self.assertEqual(state.position, "f")
         self.assertEqual(state.metrics.fights, 1)
         self.assertEqual(state.steps_remaining, 0)
         self.assertIs(state.phase, Phase.ROLL)
@@ -62,7 +69,7 @@ class FightTest(unittest.TestCase):
     def test_landing_exactly_on_fight_loses_nothing(self):
         state, events = rules.select_die(rules.initial_state(self.map, (2, 1, 1)), self.map, 0)
         state, more = rules.advance(state, self.map)
-        self.assertEqual(state.position, "n2")
+        self.assertEqual(state.position, "f")
         self.assertEqual(state.metrics.fights, 1)
         self.assertNotIn(EventKind.MOVEMENT_LOST, kinds(events + more))
 
@@ -73,11 +80,27 @@ class FightTest(unittest.TestCase):
 
     def test_player_stays_on_fight_tile_and_fight_is_consumed(self):
         state = rules.play_die(rules.initial_state(self.map, (5, 1, 1)), self.map, 0)
-        self.assertIn("n2", state.consumed)
+        self.assertIn("f", state.consumed)
         state, _ = rules.roll(state, 2)
         state = rules.play_die(state, self.map, 0)
-        self.assertEqual(state.position, "n4")
+        self.assertEqual(state.position, "c")
         self.assertEqual(state.metrics.fights, 1)
+
+
+class PlainFightTest(unittest.TestCase):
+    def setUp(self):
+        self.map = line_map("start", "normal", "fight", "normal", "normal", "final")
+
+    def test_passing_a_plain_fight_does_not_fight(self):
+        state = rules.play_die(rules.initial_state(self.map, (4, 1, 1)), self.map, 0)
+        self.assertEqual(state.position, "n4")
+        self.assertEqual(state.metrics.fights, 0)
+        self.assertNotIn("n2", state.consumed)
+
+    def test_landing_on_a_plain_fight_fights_and_consumes_it(self):
+        state = rules.play_die(rules.initial_state(self.map, (2, 1, 1)), self.map, 0)
+        self.assertEqual(state.metrics.fights, 1)
+        self.assertIn("n2", state.consumed)
 
 
 class KintonTest(unittest.TestCase):
@@ -88,8 +111,8 @@ class KintonTest(unittest.TestCase):
             node("k", "kinton", target="t"),
             node("x", "normal", ["t"]),
             node("t", "zeni", ["u"]),
-            node("u", "normal", ["boss"]),
-            node("boss", "boss"),
+            node("u", "normal", ["end"]),
+            node("end", "final"),
         )
 
     def test_kinton_stops_teleports_and_loses_remaining_movement(self):
@@ -118,15 +141,15 @@ class KintonTest(unittest.TestCase):
     def test_kinton_can_be_reused(self):
         self.assertNotIn("k", rules.play_die(rules.initial_state(self.map, (2, 1, 1)), self.map, 0).consumed)
 
-    def test_kinton_onto_boss_ends_stage(self):
+    def test_kinton_onto_final_tile_ends_stage(self):
         game_map = build_map(
             node("s", "start", ["k"]),
-            node("k", "kinton", target="boss"),
-            node("boss", "boss"),
+            node("k", "kinton", target="end"),
+            node("end", "final"),
         )
         state = rules.play_die(rules.initial_state(game_map, (3, 1, 1)), game_map, 0)
         self.assertIs(state.phase, Phase.DONE)
-        self.assertEqual(state.position, "boss")
+        self.assertEqual(state.position, "end")
 
 
 class BranchingTest(unittest.TestCase):
@@ -135,11 +158,11 @@ class BranchingTest(unittest.TestCase):
             node("s", "start", ["a"]),
             node("a", "normal", ["up", "mid", "down"]),
             node("up", "normal", ["up2"]),
-            node("up2", "normal", ["boss"]),
-            node("mid", "normal", ["boss"]),
+            node("up2", "normal", ["end"]),
+            node("mid", "normal", ["end"]),
             node("down", "zeni", ["down2"]),
-            node("down2", "normal", ["boss"]),
-            node("boss", "boss"),
+            node("down2", "normal", ["end"]),
+            node("end", "final"),
         )
 
     def test_branch_with_steps_left_asks_for_direction(self):
@@ -159,7 +182,7 @@ class BranchingTest(unittest.TestCase):
     def test_invalid_direction_raises(self):
         state = rules.play_die(rules.initial_state(self.map, (3, 1, 1)), self.map, 0)
         with self.assertRaises(ValueError):
-            rules.select_direction(state, self.map, "boss")
+            rules.select_direction(state, self.map, "end")
 
     def test_landing_exactly_on_branch_needs_no_decision_yet(self):
         state = rules.play_die(rules.initial_state(self.map, (1, 1, 1)), self.map, 0)
@@ -176,19 +199,40 @@ class BranchingTest(unittest.TestCase):
 
 class BossTest(unittest.TestCase):
     def setUp(self):
-        self.map = line_map("start", "normal", "boss", )
+        self.map = line_map("start", "normal", "boss", "normal", "boss", "final")
 
-    def test_boss_ends_stage_even_with_steps_left(self):
+    def test_boss_always_stops_and_is_not_a_fight(self):
+        state, events = rules.select_die(rules.initial_state(self.map, (6, 1, 1)), self.map, 0)
+        state, more = rules.advance(state, self.map)
+        self.assertEqual(state.position, "n2")
+        self.assertIs(state.phase, Phase.ROLL)
+        self.assertIn(EventKind.BOSS, kinds(events + more))
+        self.assertEqual(state.metrics.bosses, 1)
+        self.assertEqual(state.metrics.fights, 0)
+
+    def test_run_continues_after_boss_to_the_next_boss(self):
+        state = rules.play_die(rules.initial_state(self.map, (6, 6, 1)), self.map, 0)
+        state, _ = rules.roll(state, 6)
+        state = rules.play_die(state, self.map, 1)
+        self.assertEqual(state.position, "n4")
+        self.assertEqual(state.metrics.bosses, 2)
+        self.assertFalse(state.is_terminal)
+
+
+class FinalTileTest(unittest.TestCase):
+    def setUp(self):
+        self.map = line_map("start", "normal", "final")
+
+    def test_final_tile_ends_stage_even_with_steps_left(self):
         state, events = rules.select_die(rules.initial_state(self.map, (6, 1, 1)), self.map, 0)
         state, more = rules.advance(state, self.map)
         self.assertIs(state.phase, Phase.DONE)
         self.assertTrue(state.is_terminal)
         self.assertEqual(state.position, "n2")
         self.assertEqual(state.steps_remaining, 0)
-        self.assertIn(EventKind.BOSS, kinds(events + more))
-        self.assertEqual(state.metrics.fights, 0)  # the boss is not counted as a fight
+        self.assertIn(EventKind.FINAL, kinds(events + more))
 
-    def test_no_roll_after_boss(self):
+    def test_no_roll_after_final_tile(self):
         state = rules.play_die(rules.initial_state(self.map, (2, 1, 1)), self.map, 0)
         self.assertIs(state.phase, Phase.DONE)
         with self.assertRaises(ValueError):
@@ -197,7 +241,7 @@ class BossTest(unittest.TestCase):
 
 class TileEffectTest(unittest.TestCase):
     def test_items_are_collected_when_passed_over(self):
-        game_map = line_map("start", "support_item", "training_item", "zeni", "ki", "exclusive", "normal", "boss")
+        game_map = line_map("start", "support_item", "training_item", "zeni", "ki", "exclusive", "normal", "final")
         state = rules.play_die(rules.initial_state(game_map, (6, 1, 1)), game_map, 0)
         m = state.metrics
         self.assertEqual(
@@ -206,7 +250,7 @@ class TileEffectTest(unittest.TestCase):
         self.assertEqual(state.consumed, {"n1", "n2", "n3", "n4", "n5"})
 
     def test_amount_scales_metric(self):
-        game_map = build_map(node("s", "start", ["z"]), node("z", "zeni", ["boss"], amount=3), node("boss", "boss"))
+        game_map = build_map(node("s", "start", ["z"]), node("z", "zeni", ["end"], amount=3), node("end", "final"))
         state = rules.play_die(rules.initial_state(game_map, (1, 1, 1)), game_map, 0)
         self.assertEqual(state.metrics.zeni, 3)
 
@@ -215,8 +259,8 @@ class TileEffectTest(unittest.TestCase):
             node("s", "start", ["a"]),
             node("a", "zeni", ["k", "b"]),
             node("k", "kinton", target="s"),
-            node("b", "normal", ["boss"]),
-            node("boss", "boss"),
+            node("b", "normal", ["end"]),
+            node("end", "final"),
         )
         state = rules.play_die(rules.initial_state(game_map, (2, 1, 1)), game_map, 0)
         state = rules.play_direction(state, game_map, "k")
@@ -226,11 +270,11 @@ class TileEffectTest(unittest.TestCase):
         self.assertEqual(state.position, "a")
         self.assertEqual(state.metrics.zeni, 1)
 
-    def test_damage_negative_and_random_only_fire_on_landing(self):
-        game_map = line_map("start", "damage", "negative", "random", "normal", "boss")
+    def test_damage_baba_and_random_only_fire_on_landing(self):
+        game_map = line_map("start", "damage", "baba", "random", "normal", "final")
         passed = rules.play_die(rules.initial_state(game_map, (4, 1, 1)), game_map, 0)
-        self.assertEqual((passed.metrics.damage, passed.metrics.negative_tiles, passed.metrics.random_tiles), (0, 0, 0))
-        for die, metric in ((1, "damage"), (2, "negative_tiles"), (3, "random_tiles")):
+        self.assertEqual((passed.metrics.damage, passed.metrics.baba_shops, passed.metrics.random_tiles), (0, 0, 0))
+        for die, metric in ((1, "damage"), (2, "baba_shops"), (3, "random_tiles")):
             landed = rules.play_die(rules.initial_state(game_map, (die, 1, 1)), game_map, 0)
             self.assertEqual(getattr(landed.metrics, metric), 1, metric)
 
@@ -239,15 +283,15 @@ class TileEffectTest(unittest.TestCase):
             node("s", "start", ["d"]),
             node("d", "damage", ["k", "b"], amount=2),
             node("k", "kinton", target="s"),
-            node("b", "normal", ["boss"]),
-            node("boss", "boss"),
+            node("b", "normal", ["end"]),
+            node("end", "final"),
         )
         state = rules.play_die(rules.initial_state(game_map, (1, 1, 1)), game_map, 0)
         self.assertEqual(state.metrics.damage, 2)
         self.assertNotIn("d", state.consumed)
 
     def test_random_tile_is_consumed(self):
-        game_map = line_map("start", "random", "boss")
+        game_map = line_map("start", "random", "final")
         state = rules.play_die(rules.initial_state(game_map, (1, 1, 1)), game_map, 0)
         self.assertIn("n1", state.consumed)
 

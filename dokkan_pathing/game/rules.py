@@ -41,12 +41,13 @@ class EventKind(Enum):
     FIGHT = "fight"
     TELEPORT = "teleport"
     DAMAGE = "damage"
-    NEGATIVE = "negative"
+    BABA = "baba"
     RANDOM = "random"
     MOVEMENT_LOST = "movement_lost"
     STOP = "stop"
     ROLL = "roll"
     BOSS = "boss"
+    FINAL = "final"
 
 
 @dataclass(frozen=True)
@@ -64,8 +65,9 @@ Transition = tuple[GameState, list[Event]]
 _EVENT_FOR_TILE = {
     TileType.FIGHT: EventKind.FIGHT,
     TileType.DAMAGE: EventKind.DAMAGE,
-    TileType.NEGATIVE: EventKind.NEGATIVE,
+    TileType.BABA: EventKind.BABA,
     TileType.RANDOM: EventKind.RANDOM,
+    TileType.BOSS: EventKind.BOSS,
 }
 
 
@@ -190,23 +192,25 @@ def _enter(state: GameState, game_map: GameMap, node_id: str) -> Transition:
     state = replace(state, position=node_id, steps_remaining=state.steps_remaining - 1)
     events = [Event(EventKind.MOVE, node_id)]
 
-    if node.type is TileType.BOSS:
-        return _reach_boss(state, node_id, events)
+    if node.type is TileType.FINAL:
+        return _reach_final(state, node_id, events)
 
     rule = TILE_RULES[node.type]
     active = node_id not in state.consumed
-    if active and rule.trigger is Trigger.ENTER:
+    # A forced stop ends the move here, so the tile counts as landed on.
+    stops = active and (rule.forced_stop or node.stop)
+    if active and (rule.trigger is Trigger.ENTER or (stops and rule.trigger is Trigger.LAND)):
         state, fired = _fire(state, node, rule)
         events += fired
 
-    if active and rule.forced_stop:
+    if stops:
         lost = state.steps_remaining
         state = replace(state, steps_remaining=0, phase=Phase.ROLL)
         if node.type is TileType.KINTON:
             state = replace(state, position=node.target)
             events.append(Event(EventKind.TELEPORT, node.target, None, f"Kinton cloud: {node_id} -> {node.target}"))
-            if game_map.node(node.target).type is TileType.BOSS:
-                return _reach_boss(state, node.target, events)
+            if game_map.node(node.target).type is TileType.FINAL:
+                return _reach_final(state, node.target, events)
         if lost:
             events.append(Event(EventKind.MOVEMENT_LOST, state.position, lost, f"Forced stop: {lost} step(s) lost"))
         return state, events
@@ -234,6 +238,6 @@ def _fire(state: GameState, node: Node, rule: TileRule) -> Transition:
     return replace(state, metrics=metrics, consumed=consumed), [Event(kind, node.id, node.amount, text)]
 
 
-def _reach_boss(state: GameState, node_id: str, events: list[Event]) -> Transition:
+def _reach_final(state: GameState, node_id: str, events: list[Event]) -> Transition:
     state = replace(state, position=node_id, steps_remaining=0, phase=Phase.DONE)
-    return state, events + [Event(EventKind.BOSS, node_id, None, "Boss reached - stage complete!")]
+    return state, events + [Event(EventKind.FINAL, node_id, None, "Final tile reached - stage complete!")]

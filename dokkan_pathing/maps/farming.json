@@ -18,11 +18,12 @@
     {"id": "x",    "type": "normal",        "pos": [8, 0],  "next": ["y"]},
     {"id": "y",    "type": "normal",        "pos": [9, 1],  "next": ["m"]},
     {"id": "m",    "type": "normal",        "pos": [10, 2], "next": ["n", "p"]},
-    {"id": "n",    "type": "fight",         "pos": [11, 1], "next": ["q"]},
+    {"id": "n",    "type": "fight",         "pos": [11, 1], "next": ["q"], "stop": true},
     {"id": "q",    "type": "exclusive",     "pos": [12, 1], "next": ["r"]},
     {"id": "p",    "type": "normal",        "pos": [11, 3], "next": ["p2"]},
     {"id": "p2",   "type": "ki",            "pos": [12, 3], "next": ["r"]},
     {"id": "r",    "type": "normal",        "pos": [13, 2], "next": ["boss"]},
-    {"id": "boss", "type": "boss",          "pos": [14, 2]}
+    {"id": "boss", "type": "boss",          "pos": [14, 2], "next": ["end"]},
+    {"id": "end",  "type": "final",  "pos": [15, 2]}
   ]
 }

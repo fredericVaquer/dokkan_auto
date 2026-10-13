@@ -18,7 +18,7 @@ tree:
     CHOOSE_DIRECTION  -> decision node (agent picks a branch)
     MOVING            -> deterministic: exactly one forced step ahead
     ROLL              -> chance node (the used slot gets a random new die)
-    DONE              -> terminal (boss reached)
+    DONE              -> terminal (final tile reached)
 """
 
 from __future__ import annotations
@@ -45,6 +45,7 @@ class Metrics:
 
     rolls: int = 0
     fights: int = 0
+    bosses: int = 0
     damage: int = 0
     support_items: int = 0
     training_items: int = 0
@@ -52,7 +53,7 @@ class Metrics:
     ki: int = 0
     exclusive_items: int = 0
     random_tiles: int = 0
-    negative_tiles: int = 0
+    baba_shops: int = 0
 
     def add(self, name: str, amount: int = 1) -> Metrics:
         return replace(self, **{name: getattr(self, name) + amount})

@@ -14,43 +14,43 @@ REQUIRED_MAPS = {"basic", "fight_avoidance", "farming", "fast", "damage", "mixed
 
 
 class MapLoadingTest(unittest.TestCase):
-    def test_all_example_maps_load_and_reach_the_boss(self):
+    def test_all_example_maps_load_and_reach_the_final_tile(self):
         self.assertTrue(REQUIRED_MAPS <= set(available_maps()))
         for key in available_maps():
             game_map = load_map(key)
-            self.assertLess(game_map.distance_to_boss(game_map.start), math.inf, key)
+            self.assertLess(game_map.distance_to_final(game_map.start), math.inf, key)
             self.assertTrue(any(len(n.next) > 1 for n in game_map.nodes.values()), f"{key} has no branch")
 
     def test_mixed_map_contains_every_mechanic(self):
         game_map = load_map("mixed")
         types = {n.type for n in game_map.nodes.values()}
         for t in (TileType.FIGHT, TileType.KINTON, TileType.DAMAGE, TileType.EXCLUSIVE,
-                  TileType.RANDOM, TileType.NEGATIVE, TileType.BOSS):
+                  TileType.RANDOM, TileType.BABA, TileType.BOSS, TileType.FINAL):
             self.assertIn(t, types)
         self.assertTrue(any(len(n.next) == 3 for n in game_map.nodes.values()))
 
-    def test_distance_to_boss_counts_steps_and_kinton_shortcuts(self):
+    def test_distance_to_final_counts_steps_and_kinton_shortcuts(self):
         game_map = build_map(
             node("s", "start", ["a", "k"]),
             node("a", "normal", ["b"]),
             node("b", "normal", ["c"]),
-            node("c", "normal", ["boss"]),
+            node("c", "normal", ["end"]),
             node("k", "kinton", target="c"),
-            node("boss", "boss"),
+            node("end", "final"),
         )
-        self.assertEqual(game_map.distance_to_boss("boss"), 0)
-        self.assertEqual(game_map.distance_to_boss("a"), 3)
-        self.assertEqual(game_map.distance_to_boss("k"), 1)
-        self.assertEqual(game_map.distance_to_boss("s"), 2)
+        self.assertEqual(game_map.distance_to_final("end"), 0)
+        self.assertEqual(game_map.distance_to_final("a"), 3)
+        self.assertEqual(game_map.distance_to_final("k"), 1)
+        self.assertEqual(game_map.distance_to_final("s"), 2)
 
     def test_invalid_maps_are_rejected(self):
-        boss = node("boss", "boss")
+        end = node("end", "final")
         bad = [
-            dict(nodes=[node("s", "start", ["nowhere"]), boss]),  # dangling edge
-            dict(nodes=[node("s", "start", ["a"]), node("a"), boss]),  # dead end
-            dict(nodes=[node("s", "start", ["k"]), node("k", "kinton"), boss]),  # kinton without target
-            dict(nodes=[node("s", "start", ["a"]), node("a", "normal", ["s"])]),  # no boss
-            dict(nodes=[node("s", "start", ["boss"]), boss], initial_dice=[1, 2]),  # bad dice
+            dict(nodes=[node("s", "start", ["nowhere"]), end]),  # dangling edge
+            dict(nodes=[node("s", "start", ["a"]), node("a"), end]),  # dead end
+            dict(nodes=[node("s", "start", ["k"]), node("k", "kinton"), end]),  # kinton without target
+            dict(nodes=[node("s", "start", ["a"]), node("a", "normal", ["s"])]),  # no final tile
+            dict(nodes=[node("s", "start", ["end"]), end], initial_dice=[1, 2]),  # bad dice
         ]
         for spec in bad:
             with self.assertRaises(MapError, msg=str(spec)):
@@ -72,7 +72,7 @@ class SimulatorTest(unittest.TestCase):
                 self.assertFalse(result.aborted)
 
     def test_random_initial_dice_when_map_has_none(self):
-        game_map = build_map(node("s", "start", ["boss"]), node("boss", "boss"))
+        game_map = build_map(node("s", "start", ["end"]), node("end", "final"))
         sim = Simulator(game_map, DiceDistribution.uniform(), seed=3)
         self.assertTrue(all(1 <= d <= 6 for d in sim.state.dice))
 
@@ -91,9 +91,9 @@ class SimulatorTest(unittest.TestCase):
         # The first direction always loops back to the start, so Max never finishes.
         game_map = build_map(
             node("s", "start", ["a"]),
-            node("a", "normal", ["k", "boss"]),
+            node("a", "normal", ["k", "end"]),
             node("k", "kinton", target="s"),
-            node("boss", "boss"),
+            node("end", "final"),
         )
         result = Simulator(game_map, DiceDistribution.uniform(), seed=0, max_rolls=30).run_episode(MaxAgent())
         self.assertTrue(result.aborted)

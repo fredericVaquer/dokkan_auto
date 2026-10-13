@@ -21,7 +21,7 @@ class ReplaceDieTest(unittest.TestCase):
 
 class DiceSlotsDuringPlayTest(unittest.TestCase):
     def setUp(self):
-        self.map = line_map("start", *["normal"] * 20, "boss")
+        self.map = line_map("start", *["normal"] * 20, "final")
 
     def test_used_slot_is_empty_until_roll_then_refilled_in_same_slot(self):
         state = rules.initial_state(self.map, (6, 4, 2))

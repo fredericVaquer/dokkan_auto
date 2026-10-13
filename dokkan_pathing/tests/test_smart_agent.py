@@ -3,7 +3,7 @@
 Run them after each exercise:  python -m unittest dokkan_pathing.tests.test_smart_agent -v
 A skip shows which TODO is still missing; a failure means it is implemented but wrong.
 
-The value tests use tiny maps where every branch of the tree reaches the boss
+The value tests use tiny maps where every branch of the tree reaches the final tile
 within the search depth, so the exact expected score can be computed by hand
 and does not depend on any heuristic you add to evaluate() later.
 """
@@ -42,7 +42,7 @@ def todo_guard(test):
 class Exercise1EvaluateTest(unittest.TestCase):
     @todo_guard
     def test_terminal_state_scores_its_metrics(self):
-        game_map = line_map("start", "zeni", "boss")
+        game_map = line_map("start", "zeni", "final")
         state = rules.play_die(rules.initial_state(game_map, (2, 1, 1)), game_map, 0)
         self.assertTrue(state.is_terminal)
         self.assertEqual(evaluate(state, SearchContext(game_map, SIMPLE, UNIFORM)), -25 + 8)
@@ -51,22 +51,22 @@ class Exercise1EvaluateTest(unittest.TestCase):
 class Exercise2ExpectimaxTest(unittest.TestCase):
     @todo_guard
     def test_deterministic_finish(self):
-        """Any die reaches the boss: value = 1 roll + 1 zeni."""
-        game_map = line_map("start", "zeni", "boss")
+        """Any die reaches the final tile: value = 1 roll + 1 zeni."""
+        game_map = line_map("start", "zeni", "final")
         state = rules.initial_state(game_map, (2, 3, 4))
         value = expectimax.expectimax_value(state, 1, SearchContext(game_map, SIMPLE, UNIFORM))
         self.assertAlmostEqual(value, -25 + 8)
 
     @todo_guard
     def test_chance_node_averages_over_rolls(self):
-        """s -> a -> b(damage) -> boss with dice (1, 1, 1).
+        """s -> a -> b(damage) -> final with dice (1, 1, 1).
 
         Turn 1: forced to a.  Replacement die f:
-          f >= 2: use it, jump over the damage to the boss -> 2 rolls          = -50
+          f >= 2: use it, jump over the damage to the final -> 2 rolls          = -50
           f == 1: every die is a 1 -> land on damage, then finish -> 3 rolls+1 dmg = -100
         Expected = P(1) * -100 + (1 - P(1)) * -50
         """
-        game_map = line_map("start", "normal", "damage", "boss")
+        game_map = line_map("start", "normal", "damage", "final")
         state = rules.initial_state(game_map, (1, 1, 1))
         for dist in (UNIFORM, DiceDistribution.from_weights("low", [3, 2, 2, 1, 1, 1])):
             p1 = dist.probability(1)
@@ -78,9 +78,9 @@ class Exercise2ExpectimaxTest(unittest.TestCase):
         """Two dice turns are needed; the branch in between must not use up depth 2."""
         game_map = build_map(
             node("s", "start", ["z", "n"]),
-            node("z", "zeni", ["boss"]),
-            node("n", "normal", ["boss"]),
-            node("boss", "boss"),
+            node("z", "zeni", ["end"]),
+            node("n", "normal", ["end"]),
+            node("end", "final"),
         )
         state = rules.initial_state(game_map, (1, 1, 1))
         value = expectimax.expectimax_value(state, 2, SearchContext(game_map, SIMPLE, UNIFORM))
@@ -88,7 +88,7 @@ class Exercise2ExpectimaxTest(unittest.TestCase):
 
     @todo_guard
     def test_counts_visited_nodes(self):
-        game_map = line_map("start", "zeni", "boss")
+        game_map = line_map("start", "zeni", "final")
         ctx = SearchContext(game_map, SIMPLE, UNIFORM)
         expectimax.expectimax_value(rules.initial_state(game_map, (2, 3, 4)), 1, ctx)
         self.assertGreater(ctx.nodes_visited, 0)
@@ -97,7 +97,7 @@ class Exercise2ExpectimaxTest(unittest.TestCase):
 class Exercise3And4DecisionTest(unittest.TestCase):
     @todo_guard
     def test_score_dice_prefers_jumping_over_damage(self):
-        game_map = line_map("start", "damage", "normal", "boss")
+        game_map = line_map("start", "damage", "normal", "final")
         state = rules.initial_state(game_map, (1, 2, 3))
         scored = expectimax.score_dice(state, 2, SearchContext(game_map, SIMPLE, UNIFORM))
         self.assertEqual([s.action for s in scored], [0, 1, 2])
@@ -107,9 +107,9 @@ class Exercise3And4DecisionTest(unittest.TestCase):
     def test_score_directions_avoids_fight(self):
         game_map = build_map(
             node("s", "start", ["f", "n"]),
-            node("f", "fight", ["boss"]),
-            node("n", "normal", ["boss"]),
-            node("boss", "boss"),
+            node("f", "fight", ["end"], stop=True),
+            node("n", "normal", ["end"]),
+            node("end", "final"),
         )
         state = rules.play_die(rules.initial_state(game_map, (2, 2, 2)), game_map, 0)
         scored = expectimax.score_directions(state, 1, SearchContext(game_map, SIMPLE, UNIFORM))

@@ -55,32 +55,41 @@ TILE_STYLE: dict[TileType, tuple[str, str, str]] = {
     TileType.KI: ("#4fc3f7", "KI", "#000"),
     TileType.EXCLUSIVE: ("#ab47bc", "EX", "#fff"),
     TileType.RANDOM: ("#ffa726", "?", "#000"),
-    TileType.NEGATIVE: ("#78909c", "NEG", "#fff"),
+    TileType.BABA: ("#f48fb1", "BABA", "#000"),
     TileType.DAMAGE: ("#e53935", "DMG", "#fff"),
     TileType.FIGHT: ("#b71c1c", "VS", "#fff"),
     TileType.KINTON: ("#b3e5fc", "KIN", "#000"),
     TileType.BOSS: ("#111111", "BOSS", "#ff5252"),
+    TileType.FINAL: ("#00c853", "END", "#000"),
 }
+STOP_RING = "#ff5252"  # outer ring on tiles marked "stop": true
 CONSUMED_FILL, CONSUMED_TEXT = "#3a4562", "#76809c"
 
 POPUPS: dict[EventKind, tuple[str, str]] = {
     EventKind.COLLECT: ("+{text}", "#b9f6ca"),
     EventKind.FIGHT: ("FIGHT!", "#ff5252"),
     EventKind.DAMAGE: ("-{value} HP", "#ff8a80"),
-    EventKind.NEGATIVE: ("negative", "#cfd8dc"),
+    EventKind.BABA: ("Baba shop!", "#f8bbd0"),
     EventKind.RANDOM: ("random!", "#ffcc80"),
     EventKind.TELEPORT: ("Kinton!", "#81d4fa"),
     EventKind.MOVEMENT_LOST: ("-{value} steps", "#ffab91"),
     EventKind.BOSS: ("BOSS!", "#ff5252"),
+    EventKind.FINAL: ("CLEAR!", "#00e676"),
 }
 
 METRIC_LABELS = {
-    "rolls": "Rolls", "fights": "Fights", "damage": "Damage", "support_items": "Support items",
+    "rolls": "Rolls", "fights": "Fights", "bosses": "Bosses", "damage": "Damage", "support_items": "Support items",
     "training_items": "Training items", "zeni": "Zeni", "ki": "KI", "exclusive_items": "Exclusive",
-    "random_tiles": "Random tiles", "negative_tiles": "Negative tiles",
+    "random_tiles": "Random tiles", "baba_shops": "Baba shops",
 }
 
 MONO = ("TkFixedFont", 9)
+
+# Big maps are not squeezed to fit the window: below this scale the board scrolls.
+MIN_PX_X, MIN_PX_Y = 64.0, 52.0
+MARGIN = 50
+DRAG_THRESHOLD = 5  # pixels a left-click may move before it counts as panning
+FOLLOW_MARGIN = 140  # keep the token at least this far from the visible edge
 
 
 class GameView(tk.Frame):
@@ -117,6 +126,8 @@ class GameView(tk.Frame):
         self._token_xy = (0.0, 0.0)
         self._node_items: dict[str, tuple[int, int]] = {}
         self._layout_params = (0.0, 0.0, 1.0, 1.0, 20.0)
+        self._drag_from: tuple[int, int] | None = None
+        self._dragging = False
 
         self._build()
         self.winfo_toplevel().bind("<Key>", self._on_key)
@@ -126,10 +137,37 @@ class GameView(tk.Frame):
     # ------------------------------------------------------------------ layout
 
     def _build(self) -> None:
-        self.canvas = tk.Canvas(self, bg=BOARD_BG, highlightthickness=0, width=900, height=640)
+        board = tk.Frame(self, bg=BOARD_BG)
+        board.pack(side="left", fill="both", expand=True)
+        self.banner = tk.Label(board, text="", bg=BOARD_BG, fg=PANEL_FG, font=("TkDefaultFont", 15, "bold"))
+        self.banner.pack(side="top", fill="x", pady=(8, 2))
+        self.legend = tk.Canvas(board, bg=BOARD_BG, highlightthickness=0, height=24)
+        self.legend.pack(side="bottom", fill="x")
+        self.legend.bind("<Configure>", lambda _e: self._draw_legend())
+        hbar = tk.Scrollbar(board, orient="horizontal")
+        hbar.pack(side="bottom", fill="x")
+        vbar = tk.Scrollbar(board, orient="vertical")
+        vbar.pack(side="right", fill="y")
+        self.canvas = tk.Canvas(board, bg=BOARD_BG, highlightthickness=0, width=900, height=600,
+                                xscrollcommand=hbar.set, yscrollcommand=vbar.set)
         self.canvas.pack(side="left", fill="both", expand=True)
+        hbar.config(command=self.canvas.xview)
+        vbar.config(command=self.canvas.yview)
         self.canvas.bind("<Configure>", lambda _e: self._draw_board())
-        self.canvas.bind("<Button-1>", self._on_canvas_click)
+        # Left button: click a branch tile, or drag to pan. Middle/right button: always pan.
+        self.canvas.bind("<ButtonPress-1>", self._on_press)
+        self.canvas.bind("<B1-Motion>", self._on_drag)
+        self.canvas.bind("<ButtonRelease-1>", self._on_release)
+        for button in (2, 3):
+            self.canvas.bind(f"<ButtonPress-{button}>", lambda e: self.canvas.scan_mark(e.x, e.y))
+            self.canvas.bind(f"<B{button}-Motion>", lambda e: self.canvas.scan_dragto(e.x, e.y, gain=1))
+        # Wheel scrolls vertically, Shift+wheel horizontally (Button-4/5 on X11, MouseWheel elsewhere).
+        self.canvas.bind("<Button-4>", lambda _e: self.canvas.yview_scroll(-2, "units"))
+        self.canvas.bind("<Button-5>", lambda _e: self.canvas.yview_scroll(2, "units"))
+        self.canvas.bind("<Shift-Button-4>", lambda _e: self.canvas.xview_scroll(-2, "units"))
+        self.canvas.bind("<Shift-Button-5>", lambda _e: self.canvas.xview_scroll(2, "units"))
+        self.canvas.bind("<MouseWheel>", lambda e: self.canvas.yview_scroll(-e.delta // 120 * 2, "units"))
+        self.canvas.bind("<Shift-MouseWheel>", lambda e: self.canvas.xview_scroll(-e.delta // 120 * 2, "units"))
 
         side = tk.Frame(self, bg=PANEL_BG, width=360)
         side.pack(side="right", fill="y")
@@ -195,17 +233,19 @@ class GameView(tk.Frame):
     # ------------------------------------------------------------------- board
 
     def _compute_layout(self) -> None:
+        """Fit small maps to the window; give big maps a fixed scale and a scrollable board."""
         w = max(self.canvas.winfo_width(), 200)
         h = max(self.canvas.winfo_height(), 200)
         xs = [n.pos[0] for n in self.game_map.nodes.values()]
         ys = [n.pos[1] for n in self.game_map.nodes.values()]
-        margin, top, bottom = 50, 70, 60  # room for the banner and the legend
-        sx = (w - 2 * margin) / max(max(xs) - min(xs), 1)
-        sy = min((h - top - bottom) / max(max(ys) - min(ys), 1), sx * 2.2)
+        span_x, span_y = max(max(xs) - min(xs), 1), max(max(ys) - min(ys), 1)
+        sx = max((w - 2 * MARGIN) / span_x, MIN_PX_X)
+        sy = max(min((h - 2 * MARGIN) / span_y, sx * 2.2), MIN_PX_Y)
         radius = max(10.0, min(24.0, 0.36 * min(sx, sy)))
-        used_h = sy * (max(ys) - min(ys))
-        oy = top + (h - top - bottom - used_h) / 2
-        self._layout_params = (margin - min(xs) * sx, oy - min(ys) * sy, sx, sy, radius)
+        board_w, board_h = span_x * sx + 2 * MARGIN, span_y * sy + 2 * MARGIN
+        oy = MARGIN + max(0.0, (h - board_h) / 2)
+        self._layout_params = (MARGIN - min(xs) * sx, oy - min(ys) * sy, sx, sy, radius)
+        self.canvas.config(scrollregion=(0, 0, max(w, board_w), max(h, board_h)))
 
     def _xy(self, node_id: str) -> tuple[float, float]:
         ox, oy, sx, sy, _ = self._layout_params
@@ -238,6 +278,9 @@ class GameView(tk.Frame):
         for node in self.game_map.nodes.values():
             x, y = self._xy(node.id)
             rr = r * 1.25 if node.type is TileType.BOSS else r
+            if node.stop:
+                ring = rr + 5
+                c.create_oval(x - ring, y - ring, x + ring, y + ring, outline=STOP_RING, width=2, dash=(4, 3))
             oval = c.create_oval(x - rr, y - rr, x + rr, y + rr, width=2)
             fill, text, _ = TILE_STYLE[node.type]
             if node.amount != 1 and text:
@@ -246,25 +289,44 @@ class GameView(tk.Frame):
             txt = c.create_text(x, y, text=text, font=("TkDefaultFont", size, "bold"))
             c.create_text(x, y + rr + 8, text=node.label or node.id, fill=MUTED_FG, font=("TkDefaultFont", 7))
             self._node_items[node.id] = (oval, txt)
-        self._draw_legend()
         self._token_xy = self._xy(self._token_node)
         tr = r * 0.55
         x, y = self._token_xy
         c.create_oval(x - tr, y - tr, x + tr, y + tr, fill=TOKEN, outline="white", width=3, tags="token")
-        c.create_text(c.winfo_width() / 2, 28, text="", fill=PANEL_FG, font=("TkDefaultFont", 15, "bold"), tags="banner")
         self._refresh_nodes()
         self._update_banner()
+        self._follow(x, y)
 
     def _draw_legend(self) -> None:
-        c = self.canvas
-        x, y = 14, c.winfo_height() - 22
-        for tile, (fill, text, _) in TILE_STYLE.items():
-            if tile in (TileType.START, TileType.NORMAL):
-                continue
-            c.create_rectangle(x, y - 6, x + 12, y + 6, fill=fill, outline="")
-            name = tile.value.replace("_item", "").replace("_", " ")
+        c = self.legend
+        c.delete("all")
+        width = max(c.winfo_width(), 200)
+        x, y = 14, 12
+        entries = [(fill, tile.value.replace("_item", "").replace("_", " ")) for tile, (fill, _, _) in TILE_STYLE.items()
+                   if tile not in (TileType.START, TileType.NORMAL)]
+        entries.append((None, "stop (dashed ring)"))
+        for fill, name in entries:
+            if x > width - 90:  # wrap onto a new line
+                x, y = 14, y + 18
+            if fill is None:
+                c.create_oval(x, y - 6, x + 12, y + 6, outline=STOP_RING, width=2, dash=(4, 3))
+            else:
+                c.create_rectangle(x, y - 6, x + 12, y + 6, fill=fill, outline="")
             item = c.create_text(x + 16, y, text=name, anchor="w", fill=MUTED_FG, font=("TkDefaultFont", 8))
             x = c.bbox(item)[2] + 12
+        c.config(height=y + 12)
+
+    def _follow(self, x: float, y: float) -> None:
+        """Scroll the board so the point (x, y) is comfortably inside the visible area."""
+        c = self.canvas
+        _, _, total_w, total_h = (float(v) for v in str(c.cget("scrollregion")).split())
+        view_w, view_h = c.winfo_width(), c.winfo_height()
+        left, top = c.canvasx(0), c.canvasy(0)
+        margin_x, margin_y = min(FOLLOW_MARGIN, view_w / 3), min(FOLLOW_MARGIN, view_h / 3)
+        if not left + margin_x <= x <= left + view_w - margin_x and total_w > view_w:
+            c.xview_moveto(max(0.0, x - view_w / 2) / total_w)
+        if not top + margin_y <= y <= top + view_h - margin_y and total_h > view_h:
+            c.yview_moveto(max(0.0, y - view_h / 2) / total_h)
 
     def _refresh_nodes(self) -> None:
         state = self.sim.state
@@ -287,6 +349,7 @@ class GameView(tk.Frame):
         self._token_xy = (x, y)
         self.canvas.coords("token", x - tr, y - tr, x + tr, y + tr)
         self.canvas.tag_raise("token")
+        self._follow(x, y)
 
     def _animate_token(self, node_id: str, duration: int, then: Callable[[], None]) -> None:
         self._token_node = node_id
@@ -322,8 +385,7 @@ class GameView(tk.Frame):
     def _update_banner(self, text: str | None = None, color: str = PANEL_FG) -> None:
         if text is None:
             text, color = self._phase_text()
-        self.canvas.itemconfig("banner", text=text, fill=color)
-        self.canvas.coords("banner", self.canvas.winfo_width() / 2, 28)
+        self.banner.config(text=text, fg=color)
 
     # -------------------------------------------------------------- side panel
 
@@ -581,6 +643,16 @@ class GameView(tk.Frame):
         if event.keysym == "Escape":
             self._back_to_menu()
             return
+        pan = {"Left": (-3, 0), "Right": (3, 0), "Up": (0, -3), "Down": (0, 3)}.get(event.keysym)
+        if pan:
+            self.canvas.xview_scroll(pan[0], "units")
+            self.canvas.yview_scroll(pan[1], "units")
+            return
+        if event.keysym in ("c", "C"):  # centre the view on the token
+            self.canvas.xview_moveto(0)
+            self.canvas.yview_moveto(0)
+            self._follow(*self._token_xy)
+            return
         if event.char == " " and self.agent is not None:
             self._toggle_pause()
             return
@@ -600,12 +672,32 @@ class GameView(tk.Frame):
             if index in available_slots(self.sim.state):
                 self._player_choice(index)
 
+    def _on_press(self, event: tk.Event) -> None:
+        self._drag_from = (event.x, event.y)
+        self._dragging = False
+        self.canvas.scan_mark(event.x, event.y)
+
+    def _on_drag(self, event: tk.Event) -> None:
+        if self._drag_from is None:
+            return
+        dx, dy = event.x - self._drag_from[0], event.y - self._drag_from[1]
+        if self._dragging or dx * dx + dy * dy > DRAG_THRESHOLD ** 2:
+            self._dragging = True
+            self.canvas.scan_dragto(event.x, event.y, gain=1)
+
+    def _on_release(self, event: tk.Event) -> None:
+        if not self._dragging:
+            self._on_canvas_click(event)
+        self._drag_from = None
+        self._dragging = False
+
     def _on_canvas_click(self, event: tk.Event) -> None:
         if self.agent is not None or self.sim.phase is not Phase.CHOOSE_DIRECTION:
             return
+        cx, cy = self.canvas.canvasx(event.x), self.canvas.canvasy(event.y)  # window -> board coordinates
         for option in self.sim.direction_options():
             x, y = self._xy(option)
-            if (event.x - x) ** 2 + (event.y - y) ** 2 <= (self._radius + 4) ** 2:
+            if (cx - x) ** 2 + (cy - y) ** 2 <= (self._radius + 4) ** 2:
                 self._player_choice(option)
                 return
 

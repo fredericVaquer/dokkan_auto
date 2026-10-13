@@ -19,7 +19,7 @@ def build_map(*nodes: dict, start: str = "s", dice: tuple[int, int, int] | None 
 def line_map(*types: str) -> GameMap:
     """A straight line n0 -> n1 -> ... where ``types[i]`` is the type of ``n{i}``.
 
-    ``line_map("start", "normal", "fight", "boss")`` gives n0(start) -> n1 -> n2(fight) -> n3(boss).
+    ``line_map("start", "normal", "fight", "final")`` gives n0(start) -> n1 -> n2(fight) -> n3(final).
     """
     nodes = []
     for i, type_ in enumerate(types):

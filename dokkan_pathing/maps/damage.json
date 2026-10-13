@@ -10,7 +10,7 @@
     {"id": "c",    "type": "normal",   "pos": [3, 2],    "next": ["d"]},
     {"id": "d",    "type": "damage",   "pos": [4, 2],    "next": ["e"], "amount": 2},
     {"id": "e",    "type": "normal",   "pos": [5, 2],    "next": ["f"]},
-    {"id": "f",    "type": "negative", "pos": [6, 2],    "next": ["g"]},
+    {"id": "f",    "type": "normal",   "pos": [6, 2],    "next": ["g"]},
     {"id": "g",    "type": "normal",   "pos": [7, 2],    "next": ["h", "k"]},
     {"id": "h",    "type": "damage",   "pos": [8.5, 1],  "next": ["i"]},
     {"id": "i",    "type": "damage",   "pos": [10, 1],   "next": ["j"]},
@@ -24,6 +24,7 @@
     {"id": "q",    "type": "normal",   "pos": [14, 2],   "next": ["r"]},
     {"id": "r",    "type": "damage",   "pos": [15, 2],   "next": ["t"]},
     {"id": "t",    "type": "normal",   "pos": [16, 2],   "next": ["boss"]},
-    {"id": "boss", "type": "boss",     "pos": [17, 2]}
+    {"id": "boss", "type": "boss",     "pos": [17, 2], "next": ["end"]},
+    {"id": "end",  "type": "final",  "pos": [18, 2]}
   ]
 }

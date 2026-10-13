@@ -11,9 +11,16 @@ Map JSON format::
         {"id": "s", "type": "start", "pos": [0, 1], "next": ["a"]},
         {"id": "k", "type": "kinton", "pos": [5, 0], "target": "q"},
         {"id": "d", "type": "damage", "pos": [3, 1], "next": ["e"], "amount": 2},
+        {"id": "f", "type": "fight", "pos": [4, 1], "next": ["b"], "stop": true},
+        {"id": "b", "type": "boss", "pos": [5, 1], "next": ["end"]},
+        {"id": "end", "type": "final", "pos": [6, 1]},
         ...
       ]
     }
+
+``stop`` (default false) makes any tile a forced stop: reaching it ends the move
+there, as if you had landed on it. Bosses, Kinton clouds and final tiles always
+stop you. The stage ends on a ``final`` tile, so a map needs at least one.
 
 The order of ``next`` matters: it is the order in which branch options are
 offered, and the Max agent always takes the first one.
@@ -45,6 +52,7 @@ class Node:
     target: str | None = None  # Kinton teleport destination
     amount: int = 1  # how much the tile adds to its metric
     label: str = ""  # optional text shown under the node
+    stop: bool = False  # forced stop even if the tile type is not one
 
 
 class GameMap:
@@ -78,11 +86,15 @@ class GameMap:
     def boss_ids(self) -> tuple[str, ...]:
         return tuple(n.id for n in self.nodes.values() if n.type is TileType.BOSS)
 
-    def distance_to_boss(self, node_id: str) -> float:
-        """Fewest *steps* from ``node_id`` to a boss (``math.inf`` if unreachable).
+    @property
+    def final_ids(self) -> tuple[str, ...]:
+        return tuple(n.id for n in self.nodes.values() if n.type is TileType.FINAL)
+
+    def distance_to_final(self, node_id: str) -> float:
+        """Fewest *steps* from ``node_id`` to a final tile (``math.inf`` if unreachable).
 
         Entering a Kinton cloud counts as one step and then continues from its
-        target for free. Forced stops (fights, Kinton) are ignored, so this is
+        target for free. Forced stops (fights, bosses, Kinton) are ignored, so this is
         an optimistic estimate of how many steps are left, not of how many rolls.
         """
         if self._distances is None:
@@ -93,13 +105,13 @@ class GameMap:
         # Repeated relaxation (Bellman-Ford style). Maps are tiny, so a simple
         # loop until nothing changes is easier to read than Dijkstra.
         dist = {nid: math.inf for nid in self.nodes}
-        for boss in self.boss_ids:
-            dist[boss] = 0
+        for final in self.final_ids:
+            dist[final] = 0
         changed = True
         while changed:
             changed = False
             for node in self.nodes.values():
-                if node.type is TileType.BOSS:
+                if node.type is TileType.FINAL:
                     continue
                 if node.type is TileType.KINTON:
                     candidate = dist[node.target]
@@ -113,8 +125,8 @@ class GameMap:
     def validate(self) -> None:
         if self.start not in self.nodes:
             raise MapError(f"start node {self.start!r} does not exist")
-        if not self.boss_ids:
-            raise MapError("map has no boss node")
+        if not self.final_ids:
+            raise MapError("map has no final node")
         if self.initial_dice is not None:
             if len(self.initial_dice) != 3 or not all(1 <= d <= 6 for d in self.initial_dice):
                 raise MapError(f"initial_dice must be three values in 1..6, got {self.initial_dice}")
@@ -127,10 +139,10 @@ class GameMap:
             if node.type is TileType.KINTON:
                 if node.target not in self.nodes or node.target == node.id:
                     raise MapError(f"kinton {node.id!r} needs a valid 'target', got {node.target!r}")
-            elif node.type is not TileType.BOSS and not node.next:
+            elif node.type is not TileType.FINAL and not node.next:
                 raise MapError(f"node {node.id!r} is a dead end (no 'next')")
-        if math.isinf(self.distance_to_boss(self.start)):
-            raise MapError("boss is not reachable from the start")
+        if math.isinf(self.distance_to_final(self.start)):
+            raise MapError("final tile is not reachable from the start")
 
     @classmethod
     def from_dict(cls, data: dict) -> GameMap:
@@ -143,6 +155,7 @@ class GameMap:
                 target=raw.get("target"),
                 amount=raw.get("amount", 1),
                 label=raw.get("label", ""),
+                stop=raw.get("stop", False),
             )
             for raw in data["nodes"]
         ]

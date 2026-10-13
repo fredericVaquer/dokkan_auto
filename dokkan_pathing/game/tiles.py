@@ -23,11 +23,12 @@ class TileType(str, Enum):
     KI = "ki"
     EXCLUSIVE = "exclusive"
     RANDOM = "random"
-    NEGATIVE = "negative"
+    BABA = "baba"
     DAMAGE = "damage"
     FIGHT = "fight"
     KINTON = "kinton"
     BOSS = "boss"
+    FINAL = "final"
 
 
 class Trigger(Enum):
@@ -41,7 +42,7 @@ class TileRule:
     trigger: Trigger
     metric: str | None = None  # which Metrics field the tile increases (by node.amount)
     consumable: bool = False  # removed from the board after firing once
-    forced_stop: bool = False  # entering the tile ends the move immediately
+    forced_stop: bool = False  # entering the tile always ends the move immediately
 
 
 TILE_RULES: dict[TileType, TileRule] = {
@@ -55,12 +56,18 @@ TILE_RULES: dict[TileType, TileRule] = {
     TileType.EXCLUSIVE: TileRule(Trigger.ENTER, "exclusive_items", consumable=True),
     # Event tiles only fire if you land exactly on them, so the die you pick matters.
     TileType.RANDOM: TileRule(Trigger.LAND, "random_tiles", consumable=True),
-    TileType.NEGATIVE: TileRule(Trigger.LAND, "negative_tiles"),
+    # Baba's shop: lets you buy a random item (usually a weak support item). Rare, mildly positive.
+    TileType.BABA: TileRule(Trigger.LAND, "baba_shops", consumable=True),
     TileType.DAMAGE: TileRule(Trigger.LAND, "damage"),
-    # Enemies stop you as soon as you reach them. Once defeated they are gone.
-    TileType.FIGHT: TileRule(Trigger.ENTER, "fights", consumable=True, forced_stop=True),
+    # A plain enemy only fights you if you land on it; a bigger die walks past it.
+    # Marking the node ``"stop": true`` in the map makes it a stopping enemy instead:
+    # reaching it ends the move and starts the fight. Once defeated, enemies are gone.
+    TileType.FIGHT: TileRule(Trigger.LAND, "fights", consumable=True),
     # Kinton stops you and teleports you to node.target (handled in rules.py).
     TileType.KINTON: TileRule(Trigger.NEVER, forced_stop=True),
-    # The boss ends the stage (handled in rules.py). Not counted as a "fight".
-    TileType.BOSS: TileRule(Trigger.NEVER, forced_stop=True),
+    # Bosses always stop you. A stage can have several; the run goes on afterwards.
+    # Counted separately from "fights" so unavoidable bosses don't distort route choice.
+    TileType.BOSS: TileRule(Trigger.ENTER, "bosses", consumable=True, forced_stop=True),
+    # Reaching the final tile ends the stage (handled in rules.py).
+    TileType.FINAL: TileRule(Trigger.NEVER, forced_stop=True),
 }
