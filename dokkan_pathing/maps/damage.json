@@ -1,0 +1,29 @@
+{
+  "name": "Damage Avoidance",
+  "description": "Damage tiles only hurt if you LAND on them, so on the straight parts the die you pick decides whether you get hit. At the branch: three damage tiles in a row (first option) vs a longer safe detour.",
+  "start": "s",
+  "initial_dice": [2, 4, 6],
+  "nodes": [
+    {"id": "s",    "type": "start",    "pos": [0, 2],    "next": ["a"]},
+    {"id": "a",    "type": "normal",   "pos": [1, 2],    "next": ["b"]},
+    {"id": "b",    "type": "damage",   "pos": [2, 2],    "next": ["c"]},
+    {"id": "c",    "type": "normal",   "pos": [3, 2],    "next": ["d"]},
+    {"id": "d",    "type": "damage",   "pos": [4, 2],    "next": ["e"], "amount": 2},
+    {"id": "e",    "type": "normal",   "pos": [5, 2],    "next": ["f"]},
+    {"id": "f",    "type": "negative", "pos": [6, 2],    "next": ["g"]},
+    {"id": "g",    "type": "normal",   "pos": [7, 2],    "next": ["h", "k"]},
+    {"id": "h",    "type": "damage",   "pos": [8.5, 1],  "next": ["i"]},
+    {"id": "i",    "type": "damage",   "pos": [10, 1],   "next": ["j"]},
+    {"id": "j",    "type": "damage",   "pos": [11.5, 1], "next": ["m"], "amount": 2},
+    {"id": "k",    "type": "normal",   "pos": [8, 3],    "next": ["l"]},
+    {"id": "l",    "type": "normal",   "pos": [9, 3],    "next": ["n"]},
+    {"id": "n",    "type": "ki",       "pos": [10, 3],   "next": ["o"]},
+    {"id": "o",    "type": "normal",   "pos": [11, 3],   "next": ["p"]},
+    {"id": "p",    "type": "normal",   "pos": [12, 3],   "next": ["m"]},
+    {"id": "m",    "type": "normal",   "pos": [13, 2],   "next": ["q"]},
+    {"id": "q",    "type": "normal",   "pos": [14, 2],   "next": ["r"]},
+    {"id": "r",    "type": "damage",   "pos": [15, 2],   "next": ["t"]},
+    {"id": "t",    "type": "normal",   "pos": [16, 2],   "next": ["boss"]},
+    {"id": "boss", "type": "boss",     "pos": [17, 2]}
+  ]
+}

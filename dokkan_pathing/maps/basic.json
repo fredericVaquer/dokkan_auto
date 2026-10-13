@@ -1,0 +1,25 @@
+{
+  "name": "Basic",
+  "description": "A gentle stage: one two-way branch, a few items, one unavoidable fight (forced stop) and a damage tile that only hurts if you land on it.",
+  "start": "s",
+  "initial_dice": [2, 4, 6],
+  "nodes": [
+    {"id": "s",    "type": "start",         "pos": [0, 1],  "next": ["a"]},
+    {"id": "a",    "type": "normal",        "pos": [1, 1],  "next": ["b"]},
+    {"id": "b",    "type": "zeni",          "pos": [2, 1],  "next": ["c"]},
+    {"id": "c",    "type": "normal",        "pos": [3, 1],  "next": ["d"]},
+    {"id": "d",    "type": "normal",        "pos": [4, 1],  "next": ["e", "i"]},
+    {"id": "e",    "type": "support_item",  "pos": [5, 0],  "next": ["f"]},
+    {"id": "f",    "type": "normal",        "pos": [6, 0],  "next": ["g"]},
+    {"id": "g",    "type": "ki",            "pos": [7, 0],  "next": ["h"]},
+    {"id": "i",    "type": "normal",        "pos": [5, 2],  "next": ["j"]},
+    {"id": "j",    "type": "training_item", "pos": [6, 2],  "next": ["k"]},
+    {"id": "k",    "type": "normal",        "pos": [7, 2],  "next": ["h"]},
+    {"id": "h",    "type": "normal",        "pos": [8, 1],  "next": ["l"]},
+    {"id": "l",    "type": "random",        "pos": [9, 1],  "next": ["m"]},
+    {"id": "m",    "type": "fight",         "pos": [10, 1], "next": ["n"]},
+    {"id": "n",    "type": "damage",        "pos": [11, 1], "next": ["o"]},
+    {"id": "o",    "type": "normal",        "pos": [12, 1], "next": ["boss"]},
+    {"id": "boss", "type": "boss",          "pos": [13, 1]}
+  ]
+}

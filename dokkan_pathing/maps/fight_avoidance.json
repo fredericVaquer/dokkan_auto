@@ -1,0 +1,28 @@
+{
+  "name": "Fight Avoidance",
+  "description": "Two branches, each with a fight on the FIRST option (which Max always takes). The first fight route even dangles a KI orb. The second fight route is shorter. A smart agent should take the safe side both times.",
+  "start": "s",
+  "initial_dice": [2, 4, 6],
+  "nodes": [
+    {"id": "s",    "type": "start",  "pos": [0, 2],     "next": ["a"]},
+    {"id": "a",    "type": "normal", "pos": [1, 2],     "next": ["b"]},
+    {"id": "b",    "type": "normal", "pos": [2, 2],     "next": ["f1", "e"]},
+    {"id": "f1",   "type": "fight",  "pos": [3, 1],     "next": ["c"]},
+    {"id": "c",    "type": "normal", "pos": [4, 1],     "next": ["d"]},
+    {"id": "d",    "type": "ki",     "pos": [5, 1],     "next": ["j"]},
+    {"id": "e",    "type": "normal", "pos": [3, 3],     "next": ["g"]},
+    {"id": "g",    "type": "normal", "pos": [4, 3],     "next": ["h"]},
+    {"id": "h",    "type": "normal", "pos": [5, 3],     "next": ["j"]},
+    {"id": "j",    "type": "normal", "pos": [6, 2],     "next": ["k"]},
+    {"id": "k",    "type": "normal", "pos": [7, 2],     "next": ["m", "q"]},
+    {"id": "m",    "type": "normal", "pos": [8.67, 1],  "next": ["n"]},
+    {"id": "n",    "type": "fight",  "pos": [10.33, 1], "next": ["u"]},
+    {"id": "q",    "type": "normal", "pos": [8, 3],     "next": ["r"]},
+    {"id": "r",    "type": "zeni",   "pos": [9, 3],     "next": ["t"]},
+    {"id": "t",    "type": "normal", "pos": [10, 3],    "next": ["v"]},
+    {"id": "v",    "type": "normal", "pos": [11, 3],    "next": ["u"]},
+    {"id": "u",    "type": "normal", "pos": [12, 2],    "next": ["w"]},
+    {"id": "w",    "type": "normal", "pos": [13, 2],    "next": ["boss"]},
+    {"id": "boss", "type": "boss",   "pos": [14, 2]}
+  ]
+}

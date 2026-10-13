@@ -1,0 +1,5 @@
+# No third-party packages are needed: the project uses only the Python standard library
+# (tkinter for the GUI, unittest for the tests). Requires Python >= 3.10.
+#
+# tkinter is not installed with pip. It comes with your system Python; on Debian/Ubuntu
+# it is the `python3-tk` apt package. A venv created from that Python has tkinter too.

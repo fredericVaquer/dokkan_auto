@@ -1,0 +1,5 @@
+{
+  "uniform":   {"weights": [1, 1, 1, 1, 1, 1]},
+  "high_bias": {"weights": [1, 1, 1, 2, 2, 3]},
+  "low_bias":  {"weights": [3, 2, 2, 1, 1, 1]}
+}

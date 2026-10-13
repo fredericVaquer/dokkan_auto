@@ -1,0 +1,28 @@
+{
+  "name": "Exclusive Farming",
+  "description": "First branch: a short empty route (first option) vs a 4-steps-longer route with an EXCLUSIVE item and a support item. 'fast' should go short, 'farming' long. Second branch: an exclusive item guarded by a fight - even 'farming' should refuse it.",
+  "start": "s",
+  "initial_dice": [2, 4, 6],
+  "nodes": [
+    {"id": "s",    "type": "start",         "pos": [0, 2],  "next": ["a"]},
+    {"id": "a",    "type": "normal",        "pos": [1, 2],  "next": ["b"]},
+    {"id": "b",    "type": "normal",        "pos": [2, 2],  "next": ["h", "c"]},
+    {"id": "h",    "type": "normal",        "pos": [4, 3],  "next": ["i"]},
+    {"id": "i",    "type": "normal",        "pos": [6, 3],  "next": ["j"]},
+    {"id": "j",    "type": "normal",        "pos": [8, 3],  "next": ["m"]},
+    {"id": "c",    "type": "normal",        "pos": [3, 1],  "next": ["d"]},
+    {"id": "d",    "type": "normal",        "pos": [4, 0],  "next": ["e"]},
+    {"id": "e",    "type": "exclusive",     "pos": [5, 0],  "next": ["f"]},
+    {"id": "f",    "type": "normal",        "pos": [6, 0],  "next": ["g"]},
+    {"id": "g",    "type": "support_item",  "pos": [7, 0],  "next": ["x"]},
+    {"id": "x",    "type": "normal",        "pos": [8, 0],  "next": ["y"]},
+    {"id": "y",    "type": "normal",        "pos": [9, 1],  "next": ["m"]},
+    {"id": "m",    "type": "normal",        "pos": [10, 2], "next": ["n", "p"]},
+    {"id": "n",    "type": "fight",         "pos": [11, 1], "next": ["q"]},
+    {"id": "q",    "type": "exclusive",     "pos": [12, 1], "next": ["r"]},
+    {"id": "p",    "type": "normal",        "pos": [11, 3], "next": ["p2"]},
+    {"id": "p2",   "type": "ki",            "pos": [12, 3], "next": ["r"]},
+    {"id": "r",    "type": "normal",        "pos": [13, 2], "next": ["boss"]},
+    {"id": "boss", "type": "boss",          "pos": [14, 2]}
+  ]
+}

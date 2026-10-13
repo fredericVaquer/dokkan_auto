@@ -1,0 +1,34 @@
+{
+  "balanced": {
+    "description": "Avoid fights, finish reasonably fast, pick up good items on the way.",
+    "weights": {
+      "fights": -1000, "rolls": -25, "damage": -25, "negative_tiles": -15,
+      "support_items": 20, "training_items": 20, "zeni": 8, "ki": 5,
+      "exclusive_items": 60, "random_tiles": 6
+    }
+  },
+  "fast": {
+    "description": "Finish in as few rolls as possible. Items barely matter.",
+    "weights": {
+      "fights": -1000, "rolls": -60, "damage": -5, "negative_tiles": -5,
+      "support_items": 2, "training_items": 2, "zeni": 1, "ki": 1,
+      "exclusive_items": 5, "random_tiles": 1
+    }
+  },
+  "safe": {
+    "description": "Avoid damage and negative tiles even if it takes longer.",
+    "weights": {
+      "fights": -1000, "rolls": -10, "damage": -80, "negative_tiles": -40,
+      "support_items": 10, "training_items": 10, "zeni": 4, "ki": 3,
+      "exclusive_items": 30, "random_tiles": 3
+    }
+  },
+  "farming": {
+    "description": "Stage-exclusive items are worth a long detour. Fights still dominate.",
+    "weights": {
+      "fights": -1000, "rolls": -8, "damage": -15, "negative_tiles": -10,
+      "support_items": 40, "training_items": 40, "zeni": 15, "ki": 8,
+      "exclusive_items": 300, "random_tiles": 10
+    }
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "name": "Fast Completion",
+  "description": "A three-way split where the routes differ mainly in length (the longest is offered first), then a choice between a long walk and a Kinton cloud that teleports you right next to the boss.",
+  "start": "s",
+  "initial_dice": [2, 4, 6],
+  "nodes": [
+    {"id": "s",    "type": "start",  "pos": [0, 2],     "next": ["a"]},
+    {"id": "a",    "type": "normal", "pos": [1, 2],     "next": ["b"]},
+    {"id": "b",    "type": "normal", "pos": [2, 2],     "next": ["t1", "m1", "b1"]},
+    {"id": "t1",   "type": "normal", "pos": [3, 0.5],   "next": ["t2"]},
+    {"id": "t2",   "type": "zeni",   "pos": [4, 0.5],   "next": ["t3"]},
+    {"id": "t3",   "type": "normal", "pos": [5, 0.5],   "next": ["t4"]},
+    {"id": "t4",   "type": "normal", "pos": [6, 0.5],   "next": ["t5"]},
+    {"id": "t5",   "type": "ki",     "pos": [7, 0.5],   "next": ["t6"]},
+    {"id": "t6",   "type": "normal", "pos": [8, 0.5],   "next": ["m"]},
+    {"id": "m1",   "type": "normal", "pos": [3.4, 2],   "next": ["m2"]},
+    {"id": "m2",   "type": "normal", "pos": [4.8, 2],   "next": ["m3"]},
+    {"id": "m3",   "type": "normal", "pos": [6.2, 2],   "next": ["m4"]},
+    {"id": "m4",   "type": "normal", "pos": [7.6, 2],   "next": ["m"]},
+    {"id": "b1",   "type": "normal", "pos": [4, 3.5],   "next": ["b2"]},
+    {"id": "b2",   "type": "normal", "pos": [7, 3.5],   "next": ["m"]},
+    {"id": "m",    "type": "normal", "pos": [9, 2],     "next": ["n"]},
+    {"id": "n",    "type": "normal", "pos": [10, 2],    "next": ["p1", "k"]},
+    {"id": "p1",   "type": "normal", "pos": [11, 3.5],  "next": ["p2"]},
+    {"id": "p2",   "type": "normal", "pos": [12, 3.5],  "next": ["p3"]},
+    {"id": "p3",   "type": "normal", "pos": [13, 3.5],  "next": ["p4"]},
+    {"id": "p4",   "type": "normal", "pos": [14, 3.5],  "next": ["p5"]},
+    {"id": "p5",   "type": "normal", "pos": [15, 3.5],  "next": ["q"]},
+    {"id": "k",    "type": "kinton", "pos": [12.5, 0.5], "target": "q"},
+    {"id": "q",    "type": "normal", "pos": [16, 2],    "next": ["boss"]},
+    {"id": "boss", "type": "boss",   "pos": [17, 2]}
+  ]
+}
