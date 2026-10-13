@@ -107,7 +107,7 @@ within two turns both routes are unfinished, and a plain objective score only
 sees the items, not the extra roll the detour will cost *after* the horizon.
 
 Fix it by adding an estimate of the remaining cost to non-terminal states.
-`ctx.game_map.distance_to_final(node)` and `ctx.distribution.mean` are there for
+`ctx.game_map.distance_to_boss(node)` and `ctx.distribution.mean` are there for
 this.
 
 Test: `Exercise6HeuristicTest` (the objective should now flip the route).
@@ -116,13 +116,13 @@ Test: `Exercise6HeuristicTest` (the objective should now flip the route).
 
 Watch **Basic** with Smart at depth 2. At some point it refuses a die that
 walks into the fight and uses a smaller one. The fight on Basic cannot be
-avoided (it is a stopping fight), so this only *postpones* it past the horizon and wastes a roll. This
+avoided, so this only *postpones* it past the horizon and wastes a roll. This
 is the classic **horizon effect**. Your spec warned about the same thing for the
 boss: something unavoidable must not distort route selection.
 
 Ideas to try:
-- precompute "minimum number of fights between this node and the final tile" (like
-  `distance_to_final`, but counting fights, and remember fights are consumed) and
+- precompute "minimum number of fights between this node and the boss" (like
+  `distance_to_boss`, but counting fights, and remember fights are consumed) and
   charge them in the heuristic;
 - or deepen the search only when a fight is within reach (selective deepening).
 
